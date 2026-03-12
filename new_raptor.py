@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication ,QDate
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction,QMessageBox
+from qgis.PyQt.QtWidgets import QAction,QMessageBox,QTableWidgetItem
 
 from qgis.core import QgsProject,QgsFeature,QgsGeometry,QgsPoint
 
@@ -206,6 +206,8 @@ class NewRaptor:
             missing_layers.append("Raptor Nests")
         if not "Raptor Buffer" in map_layers:
             missing_layers.append("Raptor Buffer")
+        if not "Linear Buffer" in map_layers:
+            missing_layers.append("Linear Buffer")
         if missing_layers:
             msg="The following layers are missinf from this project\n"
             for lyr in missing_layers:
@@ -222,6 +224,7 @@ class NewRaptor:
             # substitute with your code.
             lyrNests=QgsProject.instance().mapLayersByName("Raptor Nests")[0]
             lyrBuffer=QgsProject.instance().mapLayersByName("Raptor Buffer")[0]
+            lyrLinear=QgsProject.instance().mapLayersByName("Linear Buffer")[0]
             idxNestID=lyrNests.fields().indexOf("Nest_ID") #現在のnestIDのインデックスを取得
             valNestID=lyrNests.maximumValue(idxNestID)+1 #インデックスの最大値に1を足してそこにデータを追加する
             valLat=self.dlg.spbLatitude.value()
@@ -256,9 +259,28 @@ class NewRaptor:
             lyrBuffer.reload()
 
             #以下は地物追加完了後の処理
-            dlgtable=Dlgtable()
-            dlgtable.show()
-            dlgtable.exec_()
+            dlgTable=Dlgtable()
+            dlgTable.setWindowTitle("Impacts Table for Nest{}".format(valNestID))
+            #影響を受ける線形プロジェクトを見つけ、テーブルに入力する
+            bb=buffer.boundingBox()
+            linears=lyrLinear.getFeatures(bb)
+            for linear in linears:
+                valID=linear.attribute("project")
+                valType=linear.attribute("type")
+                valDistance=linear.geometry().distance(geom)
+                if valDistance<valBuffer:
+                    #線形データでテーブルを入力する
+                    row =dlgTable.tblImpacts.rowCount()
+                    dlgTable.tblImpacts.insertRow(row)
+                    dlgTable.tblImpacts.setItem(row,0,QTableWidgetItem(str(valID)))
+                    dlgTable.tblImpacts.setItem(row,1,QTableWidgetItem(str(valType)))
+                    twi=QTableWidgetItem("{:4.5f}".format(valDistance))
+                    twi.setTextAlignment(QtCore.Qt.AlignRight)
+                    dlgTable.tblImpacts.setItem(row,2,twi)
+
+            dlgTable.tblImpacts.sortItems(2)
+            dlgTable.show()
+            dlgTable.exec_()
 
         else:
             QMessageBox.information(self.dlg,"Message","Should only if cancelled")    
