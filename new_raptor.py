@@ -32,7 +32,7 @@ from .resources import *
 # Import the code for the dialog
 from .new_raptor_dialog import NewRaptorDialog
 import os.path
-
+from .impact_table import Dlgtable
 
 class NewRaptor:
     """QGIS Plugin Implementation."""
@@ -254,6 +254,12 @@ class NewRaptor:
             ftrNest.setGeometry(buffer)
             pr.addFeatures([ftrNest])
             lyrBuffer.reload()
+
+            #以下は地物追加完了後の処理
+            dlgtable=Dlgtable()
+            dlgtable.show()
+            dlgtable.exec_()
+
         else:
             QMessageBox.information(self.dlg,"Message","Should only if cancelled")    
 
